@@ -1,0 +1,8 @@
+[Requirements]
+
+- Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
+
+[Install]
+
+bin directory contents to any PATH
+net/BeautifulSoup.scm to any GAUCHE_LOAD_PATH
