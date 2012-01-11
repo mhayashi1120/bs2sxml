@@ -1,0 +1,125 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# BeautifulSoup to sxml
+
+from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import NavigableString
+from BeautifulSoup import Tag
+import codecs
+import sys
+import os.path
+
+DEFAULT_OUTPUT_ENCODING="utf-8"
+
+sys.stdout = codecs.getwriter(DEFAULT_OUTPUT_ENCODING)(sys.stdout)
+
+def write(obj):
+    sys.stdout.write(obj)
+
+def printSxml(obj):
+
+    if isinstance(obj, Tag):
+        write("(")
+        if obj.name == "[document]":
+            write("*TOP* ")
+        else:
+            write(obj.name)
+
+        if obj.attrs:
+            write(" (@")
+            for k,v in obj.attrs:
+                if isinstance(v, basestring):
+                    if obj.containsSubstitutions and '%SOUP-ENCODING%' in v:
+                        v = obj.substituteEncoding(v, DEFAULT_OUTPUT_ENCODING)
+                write(" (%s \"%s\")" % (k, toString(v)))
+            write(")")
+
+    is_header = False
+    for o in obj:
+        text = None
+        if isinstance(o, NavigableString):
+
+            if o == u"xml version='1.0' encoding='%SOUP-ENCODING%'" :
+                if not is_header:
+                    o = obj.substituteEncoding(o, DEFAULT_OUTPUT_ENCODING)
+                    write("(*PI* xml \"%s\")" % toString("version=\"1.0\" encoding=\"UTF-8\""))
+                    is_header = True
+            elif obj.name == "[document]" and o.startswith("DOCTYPE"):
+                pass
+            else:
+                write(" \"%s\"" % (toString(o)))
+        elif isinstance(o, Tag):
+            write(" ")
+            printSxml(o)
+        else:
+            raise RuntimeError('Assert!')
+
+    if isinstance(obj, Tag):
+        write(")")
+
+def printError():
+    print "type: %s" % sys.exc_info()[0]
+    print "value: %s" % sys.exc_info()[1]
+
+def printHeaders(headers):
+    print "("
+
+    for n in headers:
+        print "(\"%s\" . \"%s\")" % (toString(n), toString(headers[n]))
+
+    print ")"
+
+def toString(s):
+    return toEncoding(s).replace('"', '\\"')
+
+def toEncoding(s, encoding=None):
+    """Encodes an object to a string in some encoding, or to Unicode.
+    ."""
+    if encoding == None:
+        encoding = DEFAULT_OUTPUT_ENCODING
+
+    if isinstance(s, unicode):
+        return s
+    elif isinstance(s, str):
+        return s.encode(encoding)
+    else:
+        return toEncoding(str(s), encoding)
+
+    return s
+
+if len(sys.argv) < 1 or 2 < len(sys.argv):
+    exit(1)
+
+if len(sys.argv) == 2:
+    file=sys.argv[1]
+
+    if not os.path.isfile(file):
+        print "Error: %s is not exists" % (file)
+        exit (1)
+
+    try:
+        fd=open(file)
+    except:
+        print "Error: Unexpected error while opening %s" % file
+        printError()
+        exit(1)
+else:
+    fd = sys.stdin
+
+try:
+    soup=BeautifulSoup(fd)
+except:
+    print "Error: Unexpected error while parsing %s" % file
+    printError()
+    exit(1)
+
+try:
+    # print soup as sxml
+    printSxml(soup)
+except:
+    print "Error: Unexpected error while printing %s" % file
+    printError()
+    exit(1)
+
+exit(0)
