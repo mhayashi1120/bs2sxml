@@ -71,7 +71,7 @@ def printHeaders(headers):
     print ")"
 
 def toString(s):
-    return toEncoding(s).replace('"', '\\"')
+    return toEncoding(s).replace('\\', '\\\\').replace('"', '\\"')
 
 def toEncoding(s, encoding=None):
     """Encodes an object to a string in some encoding, or to Unicode.

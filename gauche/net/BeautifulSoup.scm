@@ -1,4 +1,5 @@
 (define-module net.BeautifulSoup
+  (use gauche.threads)
   (use gauche.charconv)
   (use gauche.process)
   (use rfc.http)
@@ -22,16 +23,20 @@
         (http-get host path
                   :secure (string=? proto "https"))
       (receive (ip op) (sys-pipe)
-        (display body op)
-        (close-output-port op)
-        (let1 sxml (call-bs2sxml ip)
-          (values sxml status headers))))))
+        (let1 th (make-thread (^() (call-bs2sxml ip)))
+          (thread-start! th)
+          (display body op)
+          (close-output-port op)
+          (let1 sxml (call-bs2sxml ip)
+            (values sxml status headers)))))))
 
 (define (call-bs2sxml iport)
   (let1 p (run-process `(bs2sxml) :input iport :output 'out)
-    (process-wait p)
-    (unless (eq? (process-exit-status p) 0)
-      (error "failed exit bs2sxml"
-             (port->string (process-output p 'out))))
-    (with-input-from-port (process-output p 'out)
-      read)))
+    (begin0
+      (with-input-from-port (process-output p 'out)
+        read)
+      (process-wait p)
+      (unless (eq? (process-exit-status p) 0)
+        (error "failed exit bs2sxml"
+               (port->string 
+                (process-output p 'out)))))))
