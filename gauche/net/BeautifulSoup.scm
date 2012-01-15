@@ -19,7 +19,8 @@
   (receive (proto a host b path . rest) 
       (uri-parse url)
     (receive (status headers body)
-        (http-get host path)
+        (http-get host path
+                  :secure (string=? proto "https"))
       (receive (ip op) (sys-pipe)
         (display body op)
         (close-output-port op)
