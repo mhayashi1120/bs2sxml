@@ -4,7 +4,7 @@
   (use gauche.process)
   (use rfc.http)
   (use rfc.uri)
-  (export 
+  (export
    read/sxml read-url/sxml read-file/sxml
    ))
 (select-module net.BeautifulSoup)
@@ -17,9 +17,10 @@
   (call-bs2sxml port))
 
 (define (read-url/sxml url)
-  (receive (proto a host b path . rest) 
+  (receive (proto user host port path query . rest)
       (uri-parse url)
     (receive (status headers body)
+        ;;TODO user port query
         (http-get host path
                   :secure (string=? proto "https"))
       (receive (ip op) (sys-pipe)
@@ -38,5 +39,5 @@
       (process-wait p)
       (unless (eq? (process-exit-status p) 0)
         (error "failed exit bs2sxml"
-               (port->string 
+               (port->string
                 (process-output p 'out)))))))
