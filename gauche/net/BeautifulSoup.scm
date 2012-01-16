@@ -17,11 +17,10 @@
   (call-bs2sxml port))
 
 (define (read-url/sxml url)
-  (receive (proto user host port path query . rest)
-      (uri-parse url)
+  (receive (proto server path)
+      (parse-uri url)
     (receive (status headers body)
-        ;;TODO user port query
-        (http-get host path
+        (http-get server path
                   :secure (string=? proto "https"))
       (receive (ip op) (sys-pipe)
         (let1 th (make-thread (^() (call-bs2sxml ip)))
@@ -30,6 +29,20 @@
           (close-output-port op)
           (let1 sxml (thread-join! th)
             (values sxml status headers)))))))
+
+(define (parse-uri uri)
+  (receive (proto user host port path query . rest)
+      (uri-parse uri)
+    (let ([server (cond
+                   [(and port host)
+                    #`",|host|:,|port|"]
+                   [else host])]
+          [htpath (cond
+                   [(and path query)
+                    #`",|path|?,|query|"]
+                   [path path]
+                   [else "/"])])
+      (values proto server htpath))))
 
 (define (call-bs2sxml iport)
   (let* ([p (run-process `(bs2sxml) :input iport :output 'out)]
