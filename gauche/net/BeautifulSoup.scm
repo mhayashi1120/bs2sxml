@@ -28,16 +28,14 @@
           (thread-start! th)
           (display body op)
           (close-output-port op)
-          (let1 sxml (call-bs2sxml ip)
+          (let1 sxml (thread-join! th)
             (values sxml status headers)))))))
 
 (define (call-bs2sxml iport)
-  (let1 p (run-process `(bs2sxml) :input iport :output 'out)
+  (let* ([p (run-process `(bs2sxml) :input iport :output 'out)]
+         [out (port->string (process-output p 'out))])
     (begin0
-      (with-input-from-port (process-output p 'out)
-        read)
+      (with-input-from-string out read)
       (process-wait p)
       (unless (eq? (process-exit-status p) 0)
-        (error "failed exit bs2sxml"
-               (port->string
-                (process-output p 'out)))))))
+        (error "failed exit bs2sxml" out)))))
