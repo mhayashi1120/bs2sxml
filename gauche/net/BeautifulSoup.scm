@@ -23,11 +23,13 @@
         (http-get server path
                   :secure (string=? proto "https"))
       (receive (ip op) (sys-pipe)
-        (let1 th (make-thread (^() (call-bs2sxml ip)))
+        (let1 th (make-thread 
+                  (^()
+                    (display body op)
+                    (close-output-port op)))
           (thread-start! th)
-          (display body op)
-          (close-output-port op)
-          (let1 sxml (thread-join! th)
+          (let1 sxml (call-bs2sxml ip)
+            (thread-join! th)
             (values sxml status headers)))))))
 
 (define (parse-uri uri)
