@@ -6,9 +6,15 @@
 from BeautifulSoup import BeautifulSoup
 from BeautifulSoup import NavigableString
 from BeautifulSoup import Tag
+from BeautifulSoup import Comment
+from BeautifulSoup import Declaration
+from BeautifulSoup import CData
+from BeautifulSoup import ProcessingInstruction
+
 import codecs
 import sys
 import os.path
+from xml.sax.saxutils import unescape
 
 DEFAULT_OUTPUT_ENCODING="utf-8"
 
@@ -47,6 +53,14 @@ def printSxml(obj):
                     is_header = True
             elif obj.name == "[document]" and o.startswith("DOCTYPE"):
                 pass
+            elif isinstance(o, Comment):
+                pass
+            # elif isinstance(o, CData):
+            #     pass
+            # elif isinstance(o, Declaration):
+            #     pass
+            # elif isinstance(o, ProcessingInstruction):
+            #     pass
             else:
                 write(" \"%s\"" % (toString(o)))
         elif isinstance(o, Tag):
@@ -62,16 +76,16 @@ def printError():
     print "type: %s" % sys.exc_info()[0]
     print "value: %s" % sys.exc_info()[1]
 
-def printHeaders(headers):
-    print "("
-
-    for n in headers:
-        print "(\"%s\" . \"%s\")" % (toString(n), toString(headers[n]))
-
-    print ")"
-
 def toString(s):
-    return toEncoding(s).replace('\\', '\\\\').replace('"', '\\"')
+    s1 = toEncoding(s)
+    s2 = s1.replace('&quot;', '\'')
+    # escape "escape char"
+    s3 = s2.replace('\\', '\\\\')
+    # escape "double quote char"
+    s4 = s3.replace('"', '\\"')
+
+    # unescape affect only '&', '<', '>'
+    return unescape(s4)
 
 def toEncoding(s, encoding=None):
     """Encodes an object to a string in some encoding, or to Unicode.
