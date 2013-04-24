@@ -1,0 +1,126 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# BeautifulSoup to sxml
+
+from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import NavigableString
+from BeautifulSoup import Tag
+from BeautifulSoup import Comment
+from BeautifulSoup import Declaration
+from BeautifulSoup import CData
+from BeautifulSoup import ProcessingInstruction
+import codecs
+import sys
+import re
+import os.path
+from xml.etree.ElementTree import Element, SubElement, tostring
+
+# TODO get terminal information
+DEFAULT_OUTPUT_ENCODING="utf-8"
+
+sys.stdout = codecs.getwriter(DEFAULT_OUTPUT_ENCODING)(sys.stdout)
+
+def constructXml(soup):
+
+    root = findRootNode(soup);
+
+    if not root:
+        raise RuntimeError('Root html node not found');
+
+    top = Element(root.name);
+    top.attrib = constructAttrs(root);
+
+    appendChildren(top, root);
+
+    return top;
+
+def findRootNode(obj):
+    if isinstance(obj, Tag):
+        # TODO
+        if obj.name == "html":
+            return obj;
+
+        for o in obj:
+            root = findRootNode(o);
+
+            if root:
+                return root;
+    else:
+        return None;
+
+def appendChildren(xparen, sNode):
+    for s in sNode:
+        if isinstance(s, NavigableString):
+            # TODO
+            xparen.text = s;
+        elif isinstance(s, Tag):
+            constructNode(xparen, s);
+        else:
+            pass;
+
+def constructAttrs(sNode):
+    res = {};
+
+    for k,v in sNode.attrs:
+        if isinstance(v, basestring):
+            if sNode.containsSubstitutions and '%SOUP-ENCODING%' in v:
+                v = sNode.substituteEncoding(v, DEFAULT_OUTPUT_ENCODING)
+
+        # Check invalid attribute name
+        if not re.compile("^[-a-zA-Z0-9]+$").search(k):
+            v = v + k;
+            k = "unknown"
+
+        res[k] = v;
+
+    return res;
+
+def constructNode(xparenNode, sNode):
+    attr = constructAttrs(sNode);
+    ele = SubElement(xparenNode, sNode.name, attr);
+
+    appendChildren(ele, sNode);
+
+def printError():
+    print "type: %s" % sys.exc_info()[0];
+    print "value: %s" % sys.exc_info()[1];
+
+if len(sys.argv) < 1 or 2 < len(sys.argv):
+    exit(1);
+
+if len(sys.argv) == 2:
+    file=sys.argv[1];
+
+    if not os.path.isfile(file):
+        print "Error: %s is not exists" % (file);
+        exit (1);
+
+    try:
+        fd=open(file);
+    except:
+        print "Error: Unexpected error while opening %s" % file;
+        printError();
+        exit(1);
+else:
+    fd = sys.stdin;
+
+try:
+    soup = BeautifulSoup(fd);
+
+    # print soup as xml
+    xml = constructXml(soup);
+except:
+    print "Error: Unexpected error while parsing %s" % file;
+    printError();
+    exit(1);
+
+try:
+    text = tostring(xml, DEFAULT_OUTPUT_ENCODING);
+    print unicode(text, encoding=DEFAULT_OUTPUT_ENCODING);
+except:
+    print "Error: Unexpected error while printing %s" % file;
+    printError();
+    exit(1);
+
+exit(0)

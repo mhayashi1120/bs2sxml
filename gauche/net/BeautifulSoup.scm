@@ -1,4 +1,5 @@
 (define-module net.BeautifulSoup
+  (use sxml.ssax)
   (use gauche.parameter)
   (use gauche.threads)
   (use gauche.charconv)
@@ -7,21 +8,21 @@
   (use rfc.uri)
   (export
    read/sxml read-url/sxml read-file/sxml
-   bs2sxml-command))
+   bs2xml-command))
 (select-module net.BeautifulSoup)
 
-(define bs2sxml-command
-  (make-parameter "bs2sxml"))
+(define bs2xml-command
+  (make-parameter "bs2xml"))
 
 (define (read-file/sxml file :key (encoding #f))
   ;; TODO encoding is obsoleted investigate about encoding
   (let1 fp (open-input-file file)
     (unwind-protect
-     (call-bs2sxml fp)
+     (call-bs2xml fp)
      (close-output-port fp))))
 
 (define (read/sxml :optional (port (current-input-port)))
-  (call-bs2sxml port))
+  (call-bs2xml port))
 
 (define (read-url/sxml url :optional (post-data #f))
   (receive (secure? server path)
@@ -38,7 +39,7 @@
                      (display body op)
                      (close-output-port op)))
            (thread-start! th)
-           (let1 sxml (call-bs2sxml ip)
+           (let1 sxml (call-bs2xml ip)
              (thread-join! th)
              (values sxml status headers)))
          (begin
@@ -59,11 +60,12 @@
                    [else "/"])])
       (values (string=? proto "https") server htpath))))
 
-(define (call-bs2sxml iport)
-  (let* ([p (run-process `(,(bs2sxml-command)) :input iport :output 'out)]
-         [out (port->string (process-output p 'out))])
-    (begin0
-      (with-input-from-string out read)
-      (process-wait p)
-      (unless (eq? (process-exit-status p) 0)
-        (error "failed exit bs2sxml" out)))))
+(define (call-bs2xml iport)
+  (let* ([p (run-process `(,(bs2xml-command)) :input iport :output 'out)]
+         [out (process-output p 'out)])
+    (guard (e [else
+               (process-wait p)
+               (unless (eq? (process-exit-status p) 0)
+                 (error "failed exit bs2sxml" (port->string out)))
+               (raise e)])
+      (ssax:xml->sxml out '()))))
