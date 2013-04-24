@@ -1,5 +1,5 @@
 # These may be overridden by make invocators
-GOSH           = "/usr/local/bin//gosh"
+GOSH           = gosh
 
 all :
 
