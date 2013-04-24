@@ -69,8 +69,13 @@ def constructAttrs(sNode):
 
         # Check invalid attribute name
         if not re.compile("^[-a-zA-Z0-9]+$").search(k):
-            v = v + k;
+            v = "%s=%s" % (k, v);
             k = "unknown"
+
+        # TODO: reconsider it. 
+        # ignore all namespace..
+        if re.compile("^xmlns").search(k):
+            continue;
 
         res[k] = v;
 
