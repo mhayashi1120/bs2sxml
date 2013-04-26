@@ -66,6 +66,6 @@
     (guard (e [else
                (process-wait p)
                (unless (eq? (process-exit-status p) 0)
-                 (error "failed exit bs2sxml" (port->string out)))
+                 (error "failed exit bs2xml" (port->string out)))
                (raise e)])
       (ssax:xml->sxml out '()))))

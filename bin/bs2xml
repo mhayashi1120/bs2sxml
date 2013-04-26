@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # BeautifulSoup to sxml
@@ -23,12 +23,14 @@ sys.stdout = codecs.getwriter(DEFAULT_OUTPUT_ENCODING)(sys.stdout)
 
 def constructXml(soup):
 
-    root = findRootNode(soup);
+    root = findRootNode(soup) or soup;
 
-    if not root:
-        raise RuntimeError('Root html node not found');
+    if root.name  == soup.ROOT_TAG_NAME:
+        name = "html";
+    else:
+        name = root.name;
 
-    top = Element(root.name);
+    top = Element(name);
     top.attrib = constructAttrs(root);
 
     appendChildren(top, root);
@@ -37,7 +39,7 @@ def constructXml(soup):
 
 def findRootNode(obj):
     if isinstance(obj, Tag):
-        # TODO
+        # html node as a root
         if obj.name == "html":
             return obj;
 
@@ -87,10 +89,6 @@ def constructNode(xparenNode, sNode):
 
     appendChildren(ele, sNode);
 
-def printError():
-    print "type: %s" % sys.exc_info()[0];
-    print "value: %s" % sys.exc_info()[1];
-
 if len(sys.argv) < 1 or 2 < len(sys.argv):
     exit(1);
 
@@ -101,31 +99,16 @@ if len(sys.argv) == 2:
         print "Error: %s is not exists" % (file);
         exit (1);
 
-    try:
-        fd=open(file);
-    except:
-        print "Error: Unexpected error while opening %s" % file;
-        printError();
-        exit(1);
+    fd=open(file);
 else:
     fd = sys.stdin;
 
-try:
-    soup = BeautifulSoup(fd);
+soup = BeautifulSoup(fd);
 
-    # print soup as xml
-    xml = constructXml(soup);
-except:
-    print "Error: Unexpected error while parsing %s" % file;
-    printError();
-    exit(1);
+# To print soup as xml
+xml = constructXml(soup);
 
-try:
-    text = tostring(xml, DEFAULT_OUTPUT_ENCODING);
-    print unicode(text, encoding=DEFAULT_OUTPUT_ENCODING);
-except:
-    print "Error: Unexpected error while printing %s" % file;
-    printError();
-    exit(1);
+text = tostring(xml, DEFAULT_OUTPUT_ENCODING);
 
-exit(0)
+print unicode(text, encoding=DEFAULT_OUTPUT_ENCODING);
+
