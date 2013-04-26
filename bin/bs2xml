@@ -3,13 +3,8 @@
 
 # BeautifulSoup to sxml
 
-from BeautifulSoup import BeautifulSoup
-from BeautifulSoup import NavigableString
-from BeautifulSoup import Tag
-from BeautifulSoup import Comment
-from BeautifulSoup import Declaration
-from BeautifulSoup import CData
-from BeautifulSoup import ProcessingInstruction
+from BeautifulSoup import BeautifulSoup, NavigableString, \
+    Tag, Comment, Declaration, CData, ProcessingInstruction
 import codecs
 import sys
 import re
@@ -25,6 +20,7 @@ def constructXml(soup):
 
     root = findRootNode(soup) or soup;
 
+    # Virtually root html node not found.
     if root.name  == soup.ROOT_TAG_NAME:
         name = "html";
     else:
@@ -52,14 +48,28 @@ def findRootNode(obj):
         return None;
 
 def appendChildren(xparen, sNode):
+    xprev = None;
+    textAccum = "";
+
+    def appendText():
+        if xprev is None:
+            xparen.text = textAccum;
+        else:
+            xprev.tail = textAccum;
+
     for s in sNode:
         if isinstance(s, NavigableString):
-            # TODO
-            xparen.text = s;
+            textAccum = textAccum + s;
         elif isinstance(s, Tag):
-            constructNode(xparen, s);
+            appendText();
+
+            xprev = constructNode(xparen, s);
+
+            textAccum = "";
         else:
             pass;
+
+    appendText();
 
 def constructAttrs(sNode):
     res = {};
@@ -89,6 +99,8 @@ def constructNode(xparenNode, sNode):
 
     appendChildren(ele, sNode);
 
+    return ele;
+
 if len(sys.argv) < 1 or 2 < len(sys.argv):
     exit(1);
 
@@ -96,7 +108,7 @@ if len(sys.argv) == 2:
     file=sys.argv[1];
 
     if not os.path.isfile(file):
-        print "Error: %s is not exists" % (file);
+        print >> sys.stderr, "Error: %s is not exists" % (file);
         exit (1);
 
     fd=open(file);
