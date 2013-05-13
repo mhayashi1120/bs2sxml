@@ -2,9 +2,9 @@
 
 - Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
 
-- BeautifulSoup (http://www.crummy.com/software/BeautifulSoup/)
+- BeautifulSoup 3 (http://www.crummy.com/software/BeautifulSoup/)
 
 [Install]
 
-bin/bs2sxml directory contents to any PATH
+copy bin/bs2xml to any PATH
 net/BeautifulSoup.scm to any GAUCHE_LOAD_PATH

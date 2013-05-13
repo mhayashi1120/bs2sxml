@@ -1,15 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# BeautifulSoup to sxml
+# BeautifulSoup to xml
 
-from BeautifulSoup import BeautifulSoup
-from BeautifulSoup import NavigableString
-from BeautifulSoup import Tag
-from BeautifulSoup import Comment
-from BeautifulSoup import Declaration
-from BeautifulSoup import CData
-from BeautifulSoup import ProcessingInstruction
+from BeautifulSoup import BeautifulSoup, NavigableString, \
+    Tag, Comment, Declaration, CData, ProcessingInstruction
 import codecs
 import sys
 import re
@@ -23,12 +18,15 @@ sys.stdout = codecs.getwriter(DEFAULT_OUTPUT_ENCODING)(sys.stdout)
 
 def constructXml(soup):
 
-    root = findRootNode(soup);
+    root = findRootNode(soup) or soup;
 
-    if not root:
-        raise RuntimeError('Root html node not found');
+    # Virtually root html node not found.
+    if root.name  == soup.ROOT_TAG_NAME:
+        name = "html";
+    else:
+        name = root.name;
 
-    top = Element(root.name);
+    top = Element(name);
     top.attrib = constructAttrs(root);
 
     appendChildren(top, root);
@@ -37,7 +35,7 @@ def constructXml(soup):
 
 def findRootNode(obj):
     if isinstance(obj, Tag):
-        # TODO
+        # html node as a root
         if obj.name == "html":
             return obj;
 
@@ -50,14 +48,28 @@ def findRootNode(obj):
         return None;
 
 def appendChildren(xparen, sNode):
+    xprev = None;
+    textAccum = "";
+
+    def appendText():
+        if xprev is None:
+            xparen.text = textAccum;
+        else:
+            xprev.tail = textAccum;
+
     for s in sNode:
         if isinstance(s, NavigableString):
-            # TODO
-            xparen.text = s;
+            textAccum = textAccum + s;
         elif isinstance(s, Tag):
-            constructNode(xparen, s);
+            appendText();
+
+            xprev = constructNode(xparen, s);
+
+            textAccum = "";
         else:
             pass;
+
+    appendText();
 
 def constructAttrs(sNode):
     res = {};
@@ -69,8 +81,13 @@ def constructAttrs(sNode):
 
         # Check invalid attribute name
         if not re.compile("^[-a-zA-Z0-9]+$").search(k):
-            v = v + k;
+            v = "%s=%s" % (k, v);
             k = "unknown"
+
+        # TODO: reconsider it. 
+        # ignore all namespace..
+        if re.compile("^xmlns").search(k):
+            continue;
 
         res[k] = v;
 
@@ -82,9 +99,7 @@ def constructNode(xparenNode, sNode):
 
     appendChildren(ele, sNode);
 
-def printError():
-    print "type: %s" % sys.exc_info()[0];
-    print "value: %s" % sys.exc_info()[1];
+    return ele;
 
 if len(sys.argv) < 1 or 2 < len(sys.argv):
     exit(1);
@@ -93,34 +108,19 @@ if len(sys.argv) == 2:
     file=sys.argv[1];
 
     if not os.path.isfile(file):
-        print "Error: %s is not exists" % (file);
+        print >> sys.stderr, "%s is not exists" % (file);
         exit (1);
 
-    try:
-        fd=open(file);
-    except:
-        print "Error: Unexpected error while opening %s" % file;
-        printError();
-        exit(1);
+    fd=open(file);
 else:
     fd = sys.stdin;
 
-try:
-    soup = BeautifulSoup(fd);
+soup = BeautifulSoup(fd);
 
-    # print soup as xml
-    xml = constructXml(soup);
-except:
-    print "Error: Unexpected error while parsing %s" % file;
-    printError();
-    exit(1);
+# To print soup as xml
+xml = constructXml(soup);
 
-try:
-    text = tostring(xml, DEFAULT_OUTPUT_ENCODING);
-    print unicode(text, encoding=DEFAULT_OUTPUT_ENCODING);
-except:
-    print "Error: Unexpected error while printing %s" % file;
-    printError();
-    exit(1);
+text = tostring(xml, DEFAULT_OUTPUT_ENCODING);
 
-exit(0)
+print unicode(text, encoding=DEFAULT_OUTPUT_ENCODING);
+
