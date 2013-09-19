@@ -108,7 +108,7 @@ if len(sys.argv) == 2:
     file=sys.argv[1];
 
     if not os.path.isfile(file):
-        print >> sys.stderr, "%s is not exists" % (file);
+        print >> sys.stderr, "Error: %s is not exists" % (file);
         exit (1);
 
     fd=open(file);
